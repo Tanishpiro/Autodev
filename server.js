@@ -21,7 +21,7 @@ function seed() {
     opportunities: [
       {id:"opp_portal",title:"Customer Portal Build",customer:"Northstar Retail",email:"ops@northstar.example",value:42000,type:"software",scope:"Build a customer portal with account management and order tracking.",stage:"Qualified",createdAt:now()},
       {id:"opp_erp",title:"ERP Rollout",customer:"Stark Logistics",email:"ops@stark.example",value:75000,type:"implementation",scope:"ERP rollout for three warehouses.",stage:"Proposal",createdAt:now()}
-    ], projects:[], tasks:[], audit:[{id:id("audit"),action:"app.started",detail:"DeliveryFlow initialized",at:now()]
+    ], projects:[], tasks:[], audit:[{id:id("audit"),action:"app.started",detail:"DeliveryFlow initialized",at:now()}]
   };
 }
 async function persist() {
