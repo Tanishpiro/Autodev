@@ -1,13 +1,23 @@
 services:
-  deliveryflow:
-    build: .
-    ports:
-      - "4000:4000"
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: crm, POSTGRES_PASSWORD: crm, POSTGRES_DB: deliveryflow }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U crm"], interval: 3s, retries: 20 }
+  redis:
+    image: redis:7-alpine
+  api:
+    build: ./backend
     environment:
-      PORT: 4000
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-too}
-    volumes:
-      - deliveryflow-data:/app/data
-    restart: unless-stopped
-volumes:
-  deliveryflow-data:
+      DATABASE_URL: postgres://crm:crm@db:5432/deliveryflow
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me
+      WEBHOOK_SECRET: change-me-too
+    depends_on: { db: { condition: service_healthy }, redis: { condition: service_started } }
+    ports: ["4000:4000"]
+    command: sh -c "node src/seed.js && node src/index.js"
+  web:
+    build: ./frontend
+    depends_on: [api]
+    ports: ["8080:80"]
+volumes: { pgdata: {} }
