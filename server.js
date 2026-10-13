@@ -77,8 +77,9 @@ async function api(req,res,url){
   if(req.method==="POST"&&stage){
     const o=db.opportunities.find(x=>x.id===stage[1]);if(!o)return reply(res,404,{error:"Opportunity not found"});
     const {data}=await body(req);if(!["Qualified","Proposal","Won","Lost"].includes(data.stage))return reply(res,422,{error:"Invalid stage"});
-    o.stage=data.stage;let project=null;log("opportunity.stage_changed",o.title+" → "+o.stage);
-    if(o.stage==="Won"){try{project=makeProject(o);}catch(e){await persist();return reply(res,e.status||422,{error:e.message});}}
+    const previous=o.stage;o.stage=data.stage;let project=null;
+    if(o.stage==="Won"){try{project=makeProject(o);}catch(e){o.stage=previous;return reply(res,e.status||422,{error:e.message});}}
+    log("opportunity.stage_changed",o.title+" → "+o.stage);
     await persist();return reply(res,200,{opportunity:o,project});
   }
   const taskRoute=p.match(/^\/api\/tasks\/([^/]+)$/);
@@ -99,8 +100,9 @@ async function api(req,res,url){
     const expected=crypto.createHmac("sha256",WEBHOOK_SECRET).update(raw).digest("hex");const a=Buffer.from(supplied);const b=Buffer.from(expected);
     if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return reply(res,401,{error:"Invalid webhook signature"});
     const d=data.data||data;const o={id:String(d.id||id("opp")),title:String(d.title||d.name||"CRM opportunity"),customer:String(d.customer?.name||d.customer||""),email:String(d.customer?.email||""),value:Number(d.value||0),type:String(d.type||"software"),scope:String(d.scope||""),stage:["Qualified","Proposal","Won","Lost"].includes(d.stage)?d.stage:"Qualified",createdAt:now()};
-    let saved=db.opportunities.find(x=>x.id===o.id);if(saved)Object.assign(saved,o);else{db.opportunities.unshift(o);saved=o;}
-    let project=null;if(o.stage==="Won"){try{project=makeProject(saved);}catch(e){log("webhook.validation_failed",e.message);await persist();return reply(res,422,{error:e.message,opportunity:saved});}}
+    if(o.stage==="Won"&&(!o.customer.trim()||!o.scope.trim()||!(o.value>0))){log("webhook.validation_failed","A Won deal requires a customer, project scope, and value greater than zero.");await persist();return reply(res,422,{error:"A Won deal requires a customer, project scope, and value greater than zero."});}
+    let saved=db.opportunities.find(x=>x.id===o.id);if(saved){const {createdAt,...fields}=o;Object.assign(saved,fields);}else{db.opportunities.unshift(o);saved=o;}
+    const project=o.stage==="Won"?makeProject(saved):null;
     log("webhook.received",o.title);await persist();return reply(res,202,{received:true,opportunity:saved,project});
   }
   return reply(res,404,{error:"API route not found"});
