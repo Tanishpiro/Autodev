@@ -3,3 +3,6 @@ data/store.json
 .env
 .DS_Store
 Thumbs.db
+
+# Local Netlify folder
+.netlify

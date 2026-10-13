@@ -11,6 +11,16 @@
     "check": "node --check server.js && node --check public/app.js",
     "test": "node --test"
   },
-  "engines": { "node": ">=18" },
-  "license": "ISC"
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "drizzle-orm": "^1.0.0-beta.22"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^6.0.2",
+    "drizzle-kit": "^1.0.0-beta.22"
+  }
 }
