@@ -1,23 +1,32 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment: { POSTGRES_USER: crm, POSTGRES_PASSWORD: crm, POSTGRES_DB: deliveryflow }
-    volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck: { test: ["CMD-SHELL", "pg_isready -U crm"], interval: 3s, retries: 20 }
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: deliveryflow
+    ports: ["3306:3306"]
+    volumes: [mysqldata:/var/lib/mysql]
+    healthcheck: { test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"], interval: 5s, retries: 20 }
   redis:
     image: redis:7-alpine
+    ports: ["6379:6379"]
   api:
     build: ./backend
     environment:
-      DATABASE_URL: postgres://crm:crm@db:5432/deliveryflow
-      REDIS_URL: redis://redis:6379
+      DATABASE_TYPE: mysql
+      DATABASE_URL: mysql://root:root@mysql:3306/deliveryflow
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: deliveryflow
       JWT_SECRET: change-me
       WEBHOOK_SECRET: change-me-too
-    depends_on: { db: { condition: service_healthy }, redis: { condition: service_started } }
+    depends_on: { mysql: { condition: service_healthy } }
     ports: ["4000:4000"]
     command: sh -c "node src/seed.js && node src/index.js"
   web:
     build: ./frontend
     depends_on: [api]
     ports: ["8080:80"]
-volumes: { pgdata: {} }
+volumes: { mysqldata: {} }
